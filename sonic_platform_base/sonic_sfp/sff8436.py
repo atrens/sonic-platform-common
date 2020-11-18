@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 #----------------------------------------------------------------------------
 # SFF-8436 QSFP+ 10 Gbs 4X PLUGGABLE TRANSCEIVER
 #----------------------------------------------------------------------------
@@ -17,6 +16,7 @@ try:
     from math import log10
     from .sff8024 import type_of_transceiver    # Dot module supports both Python 2 and Python 3 using explicit relative import methods
     from .sff8024 import type_abbrv_name    # Dot module supports both Python 2 and Python 3 using explicit relative import methods
+    from .sff8024 import ext_specification_compliance    # Dot module supports both Python 2 and Python 3 using explicit relative import methods
     from .sffbase import sffbase    # Dot module supports both Python 2 and Python 3 using explicit relative import methods
 except ImportError as e:
     raise ImportError (str(e) + "- required module not found")
@@ -450,6 +450,14 @@ class sff8436InterfaceId(sffbase):
                 'type': 'date'}
         }
 
+    sfp_ext_specification_compliance = {
+        'Extended Specification compliance':
+            {'offset' : 0,
+             'size':1,
+             'type' : 'enum',
+             'decode' : ext_specification_compliance}
+        }
+
     qsfp_dom_capability = {
         'Tx_power_support':
             {'offset': 0,
@@ -502,6 +510,9 @@ class sff8436InterfaceId(sffbase):
     
     def parse_vendor_oui(self, sn_raw_data, start_pos):
         return sffbase.parse(self, self.vendor_oui, sn_raw_data, start_pos)
+
+    def parse_ext_specification_compliance(self, sn_raw_data, start_pos):
+        return sffbase.parse(self, self.sfp_ext_specification_compliance, sn_raw_data, start_pos)
 
     def parse_qsfp_dom_capability(self, sn_raw_data, start_pos):
         return sffbase.parse(self, self.qsfp_dom_capability, sn_raw_data, start_pos)

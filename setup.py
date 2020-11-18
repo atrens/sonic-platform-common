@@ -18,10 +18,29 @@ setup(
         'sonic_platform_base.sonic_eeprom',
         'sonic_platform_base.sonic_sfp',
         'sonic_platform_base.sonic_ssd',
+        'sonic_platform_base.sonic_pcie',
         'sonic_platform_base.sonic_thermal_control',
         'sonic_psu',
         'sonic_sfp',
         'sonic_thermal',
+        'sonic_y_cable',
+    ],
+    # NOTE: Install also depends on sonic-config-engine for portconfig.py, but we are not yet
+    # building a Python 3 version of sonic-config-engine. Also, this dependency should be
+    # eliminated by moving portconfig.py functionality into sonic-py-common
+    install_requires=[
+        'natsort==6.2.1', # 6.2.1 is the last version which supports Python 2
+        'PyYAML',
+        'redis',
+        'sonic-py-common'
+    ],
+    setup_requires = [
+        'pytest-runner',
+        'wheel'
+    ],
+    tests_require = [
+        'pytest',
+        'pytest-cov',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -33,7 +52,7 @@ setup(
         'Natural Language :: English',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Utilities',
     ],
     keywords='sonic SONiC platform hardware interface api API'

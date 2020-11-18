@@ -38,6 +38,10 @@ class ChassisBase(device_base.DeviceBase):
     # available on the chassis
     _fan_list = None
 
+    # List of FanDrawerBase-derived objects representing all fan drawers
+    # available on the chassis
+    _fan_drawer_list = None
+
     # List of PsuBase-derived objects representing all power supply units
     # available on the chassis
     _psu_list = None
@@ -56,6 +60,9 @@ class ChassisBase(device_base.DeviceBase):
     # Object derived from eeprom_tlvinfo.TlvInfoDecoder indicating the eeprom on the chassis
     _eeprom = None
 
+    # System status LED
+    _status_led = None
+
     def __init__(self):
         self._component_list = []
         self._module_list = []
@@ -63,6 +70,7 @@ class ChassisBase(device_base.DeviceBase):
         self._psu_list = []
         self._thermal_list = []
         self._sfp_list = []
+        self._fan_drawer_list = []
 
     def get_base_mac(self):
         """
@@ -71,15 +79,6 @@ class ChassisBase(device_base.DeviceBase):
         Returns:
             A string containing the MAC address in the format
             'XX:XX:XX:XX:XX:XX'
-        """
-        raise NotImplementedError
-
-    def get_serial_number(self):
-        """
-        Retrieves the hardware serial number for the chassis
-
-        Returns:
-            A string containing the hardware serial number for this chassis.
         """
         raise NotImplementedError
 
@@ -109,6 +108,52 @@ class ChassisBase(device_base.DeviceBase):
             to pass a description of the reboot cause.
         """
         raise NotImplementedError
+
+    def get_supervisor_slot(self):
+        """
+        Retrieves the physical-slot of the supervisor-module in the modular
+        chassis. On the supervisor or line-card modules, it will return the
+        physical-slot of the supervisor-module.
+
+        On the fixed-platforms, the API can be ignored.
+
+        Users of the API can catch the exception and return a default
+        ModuleBase.MODULE_INVALID_SLOT and bypass code for fixed-platforms.
+
+        Returns:
+            An integer, the vendor specific physical slot identifier of the
+            supervisor module in the modular-chassis.
+        """
+        return NotImplementedError
+
+    def get_my_slot(self):
+        """
+        Retrieves the physical-slot of this module in the modular chassis.
+        On the supervisor, it will return the physical-slot of the supervisor
+        module. On the linecard, it will return the physical-slot of the
+        linecard module where this instance of SONiC is running.
+
+        On the fixed-platforms, the API can be ignored.
+
+        Users of the API can catch the exception and return a default
+        ModuleBase.MODULE_INVALID_SLOT and bypass code for fixed-platforms.
+
+        Returns:
+            An integer, the vendor specific physical slot identifier of this
+            module in the modular-chassis.
+        """
+        return NotImplementedError
+
+    def is_modular_chassis(self):
+        """
+        Retrieves whether the sonic instance is part of modular chassis
+
+        Returns:
+            A bool value, should return False by default or for fixed-platforms.
+            Should return True for supervisor-cards, line-cards etc running as part
+            of modular-chassis.
+        """
+        return False
 
     ##############################################
     # Component methods
@@ -198,6 +243,19 @@ class ChassisBase(device_base.DeviceBase):
 
         return module
 
+    def get_module_index(self, module_name):
+        """
+        Retrieves module index from the module name
+
+        Args:
+            module_name: A string, prefixed by SUPERVISOR, LINE-CARD or FABRIC-CARD
+            Ex. SUPERVISOR0, LINE-CARD1, FABRIC-CARD5
+
+        Returns:
+            An integer, the index of the ModuleBase object in the module_list
+        """
+        raise NotImplementedError
+
     ##############################################
     # Fan methods
     ##############################################
@@ -242,6 +300,47 @@ class ChassisBase(device_base.DeviceBase):
                              index, len(self._fan_list)-1))
 
         return fan
+
+    def get_num_fan_drawers(self):
+        """
+        Retrieves the number of fan drawers available on this chassis
+
+        Returns:
+            An integer, the number of fan drawers available on this chassis
+        """
+        return len(self._fan_drawer_list)
+
+    def get_all_fan_drawers(self):
+        """
+        Retrieves all fan drawers available on this chassis
+
+        Returns:
+            A list of objects derived from FanDrawerBase representing all fan
+            drawers available on this chassis
+        """
+        return self._fan_drawer_list
+
+    def get_fan_drawer(self, index):
+        """
+        Retrieves fan drawers represented by (0-based) index <index>
+
+        Args:
+            index: An integer, the index (0-based) of the fan drawer to
+            retrieve
+
+        Returns:
+            An object dervied from FanDrawerBase representing the specified fan
+            drawer
+        """
+        fan_drawer = None
+
+        try:
+            fan_drawer = self._fan_drawer_list[index]
+        except IndexError:
+            sys.stderr.write("Fan drawer index {} out of range (0-{})\n".format(
+                             index, len(self._fan_drawer_list)-1))
+
+        return fan_drawer
 
     ##############################################
     # PSU methods
@@ -388,6 +487,33 @@ class ChassisBase(device_base.DeviceBase):
         return sfp
 
     ##############################################
+    # System LED methods
+    ##############################################
+
+    def set_status_led(self, color):
+        """
+        Sets the state of the system LED
+
+        Args:
+            color: A string representing the color with which to set the
+                   system LED
+
+        Returns:
+            bool: True if system LED state is set successfully, False if not
+        """
+        raise NotImplementedError
+
+    def get_status_led(self):
+        """
+        Gets the state of the system LED
+
+        Returns:
+            A string, one of the valid LED color strings which could be vendor
+            specified.
+        """
+        raise NotImplementedError
+
+    ##############################################
     # Other methods
     ##############################################
 
@@ -433,6 +559,15 @@ class ChassisBase(device_base.DeviceBase):
                   Ex. {'fan':{'0':'0', '2':'1'}, 'sfp':{'11':'0'}}
                       indicates that fan 0 has been removed, fan 2
                       has been inserted and sfp 11 has been removed.
+                  Specifically for SFP event, besides SFP plug in and plug out,
+                  there are some other error event could be raised from SFP, when 
+                  these error happened, SFP eeprom will not be avalaible, XCVRD shall
+                  stop to read eeprom before SFP recovered from error status.
+                      status='2' I2C bus stuck,
+                      status='3' Bad eeprom,
+                      status='4' Unsupported cable,
+                      status='5' High Temperature,
+                      status='6' Bad cable.
         """
         raise NotImplementedError
 

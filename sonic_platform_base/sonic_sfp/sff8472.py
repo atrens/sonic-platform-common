@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 #--------------------------------------------------------------------------
 #
 # Copyright 2012 Cumulus Networks, inc  all rights reserved
@@ -281,7 +280,7 @@ class sff8472InterfaceId(sffbase):
              '09': 'MU',
              '0a': 'SG',
              '0b': 'Optical pigtail',
-             '0C': 'MPO Parallel Optic',
+             '0c': 'MPO Parallel Optic',
              '20': 'HSSDCII',
              '21': 'CopperPigtail',
              '22': 'RJ45'}
